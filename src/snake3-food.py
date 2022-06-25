@@ -9,7 +9,7 @@ red = (255, 0, 0)
 green = (0, 155, 0)
 
 # window size
-display_width = 800
+display_width = 400
 display_height = 600
 
 # snake block size
@@ -45,6 +45,7 @@ isEaten = True
 while True:
     gameDisplay.fill(black)
 
+    clock.tick(20)
     # handle key event
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

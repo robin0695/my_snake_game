@@ -8,9 +8,8 @@ red = (255, 0, 0)
 green = (0, 155, 0)
 
 # window size
-display_width = 800
+display_width = 400
 display_height = 600
-
 # snake block size
 block_size = 10
 
