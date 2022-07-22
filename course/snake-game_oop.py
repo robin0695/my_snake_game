@@ -2,6 +2,7 @@
 import sys
 import pygame
 import random
+from snake_client import SnakeClient
 
 GREEN = (0, 155, 0)
 BLACK = (0, 0, 0)
@@ -9,7 +10,7 @@ RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
 # window size 初始化
-DISPLAY_WIDTH = 400
+DISPLAY_WIDTH = 800
 DISPLAY_HEIGHT = 600
 
 class Snake:
@@ -54,6 +55,11 @@ class Snake:
         # 通过draw 矩形，形成蛇的身体 
         for i in self.snake_body:
             pygame.draw.rect(game_display, GREEN, [i[0], i[1], self.block_size, self.block_size])
+
+    def draw_shadow(self, game_display, new_snake_body):
+        # 通过draw 矩形，形成蛇的身体 
+        for i in new_snake_body:
+            pygame.draw.rect(game_display, GREEN, [i[0] + DISPLAY_WIDTH / 2, i[1], self.block_size, self.block_size])
         
         
 class Food:
@@ -79,7 +85,7 @@ class Food:
         
     def food_eaten(self):
         self.count += 1
-        self.refresh()
+        return self.refresh()
 
     def get_food_count(self):
         return self.count
@@ -93,6 +99,9 @@ class Food:
             self.food_color_incr = 255
         pygame.draw.rect(game_display, (self.basic_color, self.food_color_incr, self.food_color_incr),
                          [self.food_cod[0], self.food_cod[1], self.block_size, self.block_size])
+
+    def draw_shadow(self, game_dispaly, cod):
+        pygame.draw.rect(game_dispaly, (255,100,255), [cod[0] + DISPLAY_WIDTH / 2, cod[1], self.block_size, self.block_size])
         
 
 class GameInfo:
@@ -101,6 +110,7 @@ class GameInfo:
 
     def draw(self, game_display, font, score, level, snake_head, message):
         pygame.draw.line(game_display, WHITE, [0, DISPLAY_HEIGHT - self.y], [DISPLAY_WIDTH, DISPLAY_HEIGHT - self.y], 2)
+        pygame.draw.line(game_display, WHITE, [DISPLAY_WIDTH / 2, 0], [DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - self.y], 2)
         msg = font.render(f"MESSAGE:{message}", True, WHITE)
         info = font.render(f"SCORE:{score} | LEVEL:{level + 1}| X:{snake_head[0]} Y:{snake_head[1]}", True, WHITE)
         help_message = font.render(f"Press Q to quite, SPACE to replay", True, WHITE)
@@ -112,29 +122,59 @@ class GameInfo:
 class GameManager:
     def __init__(self, game_display) -> None:
         self.snake = Snake()
-        self.food = Food(DISPLAY_WIDTH, DISPLAY_HEIGHT, 255)
+        self.food = Food(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT, 255)
         self.game_display = game_display
         self.move_step = [self.snake.get_snake_unit_size(), 0]
         self.game_info = GameInfo(75)
         self.font = pygame.font.SysFont(None, 20)
+        self.single = False
+        try:
+            self.nt_client = SnakeClient()
+            self.nt_client.connect()
+            self.nt_client.start()
+        except ConnectionRefusedError as e:
+            print(e)
+            self.single = True
+            pass
+            
     
     def work(self):
+
+        snake_shadow = []
+        food_shadow = []
         if not self.check_game_over():
             message = "Running...."
             if self.check_eat_food() :
                 self.snake.move(self.move_step, True)
-                self.food.food_eaten()
+                food_shadow = self.food.food_eaten()
             else:
                 self.snake.move(self.move_step, False)
-
+                food_shadow = self.food.get_food_cod()
             self.food.draw(self.game_display)
-
         else:
             message = "Good play, game over!"
+            
         self.snake.draw(self.game_display)
+        
+        # draw shadow
+        snake_shadow = self.nt_client.get_competitor_snake()
+        if snake_shadow:
+            self.snake.draw_shadow(self.game_display, snake_shadow)
+        if food_shadow:
+            self.food.draw_shadow(self.game_display, food_shadow)
+            
         self.game_info.draw(self.game_display, self.font, self.food.get_food_count() * 10, 
                             int(self.food.get_food_count() / 10), self.snake.get_snake_head(), message)
-    
+
+        # send snake body
+        if not self.single:
+            body_dic = []
+            for s in self.snake.get_snake_body():
+                body_dic.append({'x':s[0], 'y':s[1]})
+            message = {'message':body_dic}
+            self.nt_client.send_message(message)
+
+   
     def handle_key_down(self, key):
         if key in (pygame.K_DOWN, pygame.K_UP, pygame.K_LEFT, pygame.K_RIGHT):
             if key == pygame.K_DOWN:
@@ -146,7 +186,6 @@ class GameManager:
             if key == pygame.K_RIGHT:
                 move_step = [self.snake.get_snake_unit_size(), 0]
             self.move_step = move_step
-
     def check_eat_food(self):
         if  self.snake.get_snake_head()[0] == self.food.get_food_cod()[0] and \
             self.snake.get_snake_head()[1] == self.food.get_food_cod()[1]:
@@ -155,9 +194,12 @@ class GameManager:
             return False
             
     def check_game_over(self):
-        if  (self.snake.get_snake_head()[0] <= 0 or self.snake.get_snake_head()[0] >= DISPLAY_WIDTH) or \
+        if  (self.snake.get_snake_head()[0] <= 0 or self.snake.get_snake_head()[0] >= DISPLAY_WIDTH / 2 - 10) or \
             (self.snake.get_snake_head()[1] <= 0 or self.snake.get_snake_head()[1] >= DISPLAY_HEIGHT - 80):
             return True
+    
+    def close(self):
+        self.nt_client.disconnect()
 
 class Game:
     def __init__(self) -> None:
@@ -178,13 +220,14 @@ class Game:
     
     def play(self):
         while True:
-            self.clock.tick(20)
+            self.clock.tick(1)
             self.game_display.fill(BLACK)
             self.game_display.blit(self.bg_image, (0, 0))
             # 添加关闭窗口事件处理
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     print("Close the window!")
+                    self.gameManager.close()
                     pygame.quit()
                     sys.exit(0)
 
