@@ -31,8 +31,8 @@ class SnakeClient(Thread):
     def send_message(self, message) -> None:
         client_data = json.dumps({self.client_id:message}).encode('utf-8')
         client_data_length = len(client_data)
-        self.tcp_client_socket.send(struct.pack('i', client_data_length))
-        self.tcp_client_socket.send(client_data)
+        self.tcp_client_socket.sendall(struct.pack('i', client_data_length))
+        self.tcp_client_socket.sendall(client_data)
         
     def run(self) -> None:
         try:
@@ -47,8 +47,10 @@ class SnakeClient(Thread):
                         del (self.shadow_snake[self.client_id])
                         # print(self.shadow_snake)
         except struct.error as e:
+            print(data, e)
             pass
         except json.decoder.JSONDecodeError as ee:
+            print(data, ee)
             pass
             
 

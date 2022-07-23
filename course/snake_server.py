@@ -49,8 +49,8 @@ class SnakeServer:
                     clients[tcp_client_socket] = client_id
                     client_id_data = {'client-id': f'{client_id}'}
                     client_data_json = json.dumps(client_id_data)
-                    tcp_client_socket.send(struct.pack('i', len(client_data_json.encode('utf-8'))))
-                    tcp_client_socket.send(client_data_json.encode('utf-8'))
+                    tcp_client_socket.sendall(struct.pack('i', len(client_data_json.encode('utf-8'))))
+                    tcp_client_socket.sendall(client_data_json.encode('utf-8'))
 
                 else:
                     try:
@@ -59,8 +59,8 @@ class SnakeServer:
                         if data:
                             data_dic = json.loads(data)
                             client_data.update(data_dic)
-                            print(client_data)
                     except ConnectionResetError as e:
+                        print(e)
                         remove_item.append(socket_item)
             
             for it in remove_item:
@@ -74,9 +74,10 @@ class SnakeServer:
                 json_data = json.dumps(client_data).encode('utf-8')
                 json_data_length = len(json_data)
                 try:
-                    write_item.send(struct.pack('i', json_data_length))
-                    write_item.send(json_data)
+                    write_item.sendall(struct.pack('i', json_data_length))
+                    write_item.sendall(json_data)
                 except ConnectionResetError as e:
+                    print(e)
                     remove_item.append(write_item)
 
             remove_item = []
