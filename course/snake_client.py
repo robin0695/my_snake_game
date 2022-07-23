@@ -3,7 +3,8 @@ import json
 import struct
 from threading import Thread
 
-HOST = '127.0.0.1'
+HOST = '192.168.0.110'
+#HOST = '127.0.0.1'
 PORT = 21546
 BUFFER_SIZE = 1024
 ADDR = (HOST, PORT)
@@ -22,6 +23,7 @@ class SnakeClient(Thread):
         data_len = struct.unpack('i', self.tcp_client_socket.recv(4))[0]
         data = self.tcp_client_socket.recv(data_len).decode('utf-8')
         self.client_id = json.loads(data)["client-id"]
+        print(self.client_id)
 
     def disconnect(self) -> None:
         self.stop = True
@@ -33,15 +35,22 @@ class SnakeClient(Thread):
         self.tcp_client_socket.send(client_data)
         
     def run(self) -> None:
-        while not self.stop:
-            data_len = struct.unpack('i', self.tcp_client_socket.recv(4))[0]
-            data = self.tcp_client_socket.recv(data_len).decode('utf-8')
-            if data:
-                data_dic = json.loads(data)
-                self.shadow_snake = data_dic
-                if self.client_id in self.shadow_snake:
-                    del (self.shadow_snake[self.client_id])
-                    # print(self.shadow_snake)
+        try:
+            while not self.stop:
+                data_len = struct.unpack('i', self.tcp_client_socket.recv(4))[0]
+                data = self.tcp_client_socket.recv(data_len).decode('utf-8')
+                if data:
+                    print(data)
+                    print(data_len, "-----------")
+                    data_dic = json.loads(data)
+                    self.shadow_snake = data_dic
+                    if self.client_id in self.shadow_snake:
+                        del (self.shadow_snake[self.client_id])
+                        # print(self.shadow_snake)
+        except struct.error as e:
+            pass
+        except json.decoder.JSONDecodeError as ee:
+            pass
             
 
     def get_competitor_snake(self):

@@ -1,4 +1,5 @@
 import sys
+from xxlimited import foo
 import pygame
 import random
 
@@ -18,6 +19,7 @@ display_height = 600
 
 # 初始化pygame，包括时钟，字体等
 pygame.init()
+pygame.mixer.init()
 pygame.display.set_caption("My Snake Game")
 
 game_display = pygame.display.set_mode((display_width, display_height))
@@ -53,12 +55,26 @@ msg_from_game = "Running..."
 score = 0
 level = 0
 speed_up = 0
+
+food_color_change = 255
+# image
+bg_img = pygame.image.load('course/bg.png')
+bg_img = pygame.transform.scale(bg_img, (400, 520))
+
+# music
+food_music = "course/music.mp3"
+background_music = "course/background.mp3"
+eat_food_sound = pygame.mixer.Sound(food_music)
+back_music_sound = pygame.mixer.Sound(background_music)
+# 循环播放背景音乐
+back_music_sound.play(-1)
 # main loop，主循环
 while True:
     
     # 画布填充黑色
     game_display.fill(black)
-    
+    game_display.blit(bg_img, (0, 0))
+
     # 设置时钟
     clock.tick(20 + level * 5 + speed_up)
 
@@ -132,13 +148,19 @@ while True:
             isEaten = True
             score += 10
             level = int(score / 100)
+            eat_food_sound.play()
         else:
             del(snake_body[0])
 
     # 通过draw 矩形，形成蛇的身体 
     for i in snake_body:
         pygame.draw.rect(game_display, green, [i[0], i[1], block_size, block_size])
-    pygame.draw.rect(game_display, red, [food_x, food_y, block_size, block_size])
+
+    # 通过改变 G，B值来让食物闪烁
+    food_color_change -= 20
+    if food_color_change < 10:
+        food_color_change = 255
+    pygame.draw.rect(game_display, (255, food_color_change, food_color_change), [food_x, food_y, block_size, block_size])
 
     pygame.draw.line(game_display, white, [0, display_height - 75], [display_width, display_height - 75], 2)
     

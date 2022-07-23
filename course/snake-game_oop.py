@@ -24,7 +24,7 @@ class Snake:
             snake_unit = [20 + i * self.block_size, 300]
             self.snake_body.append(snake_unit)
 
-        food_music = 'music.mp3'
+        food_music = 'course/music.mp3'
         self.eat_food_sound = pygame.mixer.Sound(food_music)
 
     def move(self, move_step, eat_food):
@@ -211,16 +211,16 @@ class Game:
         self.clock = pygame.time.Clock()
         self.gameManager = GameManager(self.game_display)
 
-        bg_img = pygame.image.load('bg.png')
+        bg_img = pygame.image.load('course/bg.png')
         self.bg_image = pygame.transform.scale(bg_img, (400, 525))
 
-        back_music = 'background.mp3'
+        back_music = 'course/background.mp3'
         back_music_sound = pygame.mixer.Sound(back_music)
         back_music_sound.play(-1)
     
     def play(self):
         while True:
-            self.clock.tick(1)
+            self.clock.tick(2)
             self.game_display.fill(BLACK)
             self.game_display.blit(self.bg_image, (0, 0))
             # 添加关闭窗口事件处理
