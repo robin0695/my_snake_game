@@ -6,6 +6,7 @@ import select
 import uuid
 import json
 import struct
+import time
 
 HOST = ''
 PORT = 21546
@@ -32,6 +33,7 @@ class SnakeServer:
 
         while True:
             
+            time.sleep(0.02)
             read_list, write_list, error_list = select.select(rlist, wlist, xlist)
                     
             # print(len(remove_item), len(read_list), len(write_list))

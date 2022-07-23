@@ -59,7 +59,7 @@ class Snake:
     def draw_shadow(self, game_display, new_snake_body):
         # 通过draw 矩形，形成蛇的身体 
         for i in new_snake_body:
-            pygame.draw.rect(game_display, GREEN, [i[0] + DISPLAY_WIDTH / 2, i[1], self.block_size, self.block_size])
+            pygame.draw.rect(game_display, (176, 224, 230), [i[0] + DISPLAY_WIDTH / 2, i[1], self.block_size, self.block_size])
         
         
 class Food:
@@ -101,18 +101,22 @@ class Food:
                          [self.food_cod[0], self.food_cod[1], self.block_size, self.block_size])
 
     def draw_shadow(self, game_dispaly, cod):
-        pygame.draw.rect(game_dispaly, (255,100,255), [cod[0] + DISPLAY_WIDTH / 2, cod[1], self.block_size, self.block_size])
+        pygame.draw.rect(game_dispaly, (135,38,87), [cod[0] + DISPLAY_WIDTH / 2, cod[1], self.block_size, self.block_size])
         
 
 class GameInfo:
     def __init__(self, y) -> None:
         self.y = y
 
-    def draw(self, game_display, font, score, level, snake_head, message):
+    def draw(self, game_display, font, score, level, snake_head, message, com_score):
         pygame.draw.line(game_display, WHITE, [0, DISPLAY_HEIGHT - self.y], [DISPLAY_WIDTH, DISPLAY_HEIGHT - self.y], 2)
         pygame.draw.line(game_display, WHITE, [DISPLAY_WIDTH / 2, 0], [DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - self.y], 2)
         msg = font.render(f"MESSAGE:{message}", True, WHITE)
-        info = font.render(f"SCORE:{score} | LEVEL:{level + 1}| X:{snake_head[0]} Y:{snake_head[1]}", True, WHITE)
+        if com_score:
+            info = font.render(f"SCORE:{score} vs COMPETITOR SCORE:{com_score}| LEVEL:{level + 1}| X:{snake_head[0]} Y:{snake_head[1]}", True, WHITE)
+        else:
+            info = font.render(f"SCORE:{score} | LEVEL:{level + 1}| X:{snake_head[0]} Y:{snake_head[1]}", True, WHITE)
+
         help_message = font.render(f"Press Q to quite, SPACE to replay", True, WHITE)
         game_display.blit(msg, [10, DISPLAY_HEIGHT - (self.y - 50)])
         game_display.blit(info, [10, DISPLAY_HEIGHT - (self.y - 30)])
@@ -149,7 +153,6 @@ class GameManager:
                 food_shadow = self.food.food_eaten()
             else:
                 self.snake.move(self.move_step, False)
-                food_shadow = self.food.get_food_cod()
             self.food.draw(self.game_display)
         else:
             message = "Good play, game over!"
@@ -158,21 +161,29 @@ class GameManager:
         
         # draw shadow
         snake_shadow = self.nt_client.get_competitor_snake()
+        food_shadow = self.nt_client.get_competitor_food()
         if snake_shadow:
             self.snake.draw_shadow(self.game_display, snake_shadow)
         if food_shadow:
             self.food.draw_shadow(self.game_display, food_shadow)
             
         self.game_info.draw(self.game_display, self.font, self.food.get_food_count() * 10, 
-                            int(self.food.get_food_count() / 10), self.snake.get_snake_head(), message)
+                            int(self.food.get_food_count() / 10), self.snake.get_snake_head(), message, self.nt_client.get_competitor_score())
 
         # send snake body
         if not self.single:
             body_dic = []
             for s in self.snake.get_snake_body():
                 body_dic.append({'x':s[0], 'y':s[1]})
-            message = {'message':body_dic}
-            self.nt_client.send_message(message)
+
+            snake_data = {'snake_body':body_dic}
+            snake_data['snake_food']={'x': self.food.get_food_cod()[0], 'y': self.food.get_food_cod()[1]}
+            snake_data['score'] = f'{self.food.get_food_count() * 10}'
+            try:
+                self.nt_client.send_message(snake_data)
+            except ConnectionResetError as e:
+                print("lost connection, play as single player.")
+                self.single=True
 
    
     def handle_key_down(self, key):
@@ -220,8 +231,9 @@ class Game:
     
     def play(self):
         while True:
-            self.clock.tick(2)
+            self.clock.tick(20)
             self.game_display.fill(BLACK)
+            pygame.draw.rect(self.game_display, (41, 36, 33), [ DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 75])
             self.game_display.blit(self.bg_image, (0, 0))
             # 添加关闭窗口事件处理
             for event in pygame.event.get():

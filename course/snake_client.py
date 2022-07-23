@@ -2,7 +2,7 @@ from socket import *
 import json
 import struct
 from threading import Thread
-
+import time
 HOST = '192.168.0.110'
 #HOST = '127.0.0.1'
 PORT = 21546
@@ -36,12 +36,11 @@ class SnakeClient(Thread):
         
     def run(self) -> None:
         try:
+            time.sleep(0.02)
             while not self.stop:
                 data_len = struct.unpack('i', self.tcp_client_socket.recv(4))[0]
                 data = self.tcp_client_socket.recv(data_len).decode('utf-8')
                 if data:
-                    print(data)
-                    print(data_len, "-----------")
                     data_dic = json.loads(data)
                     self.shadow_snake = data_dic
                     if self.client_id in self.shadow_snake:
@@ -56,7 +55,16 @@ class SnakeClient(Thread):
     def get_competitor_snake(self):
         competitor_snake = []
         if len(self.shadow_snake.keys()) > 0:
-            cods = self.shadow_snake[list(self.shadow_snake.keys())[0]]['message']
+            cods = self.shadow_snake[list(self.shadow_snake.keys())[0]]['snake_body']
             for cod in cods:
                 competitor_snake.append([cod['x'], cod['y']])
         return competitor_snake
+
+    def get_competitor_food(self):
+        if len(self.shadow_snake.keys()) > 0:
+            cod = self.shadow_snake[list(self.shadow_snake.keys())[0]]['snake_food']
+            return [cod['x'], cod['y']]
+
+    def get_competitor_score(self):
+        if len(self.shadow_snake.keys()) > 0:
+            return self.shadow_snake[list(self.shadow_snake.keys())[0]]['score']
