@@ -55,10 +55,19 @@ class SnakeServer:
                 else:
                     try:
                         data_len = struct.unpack('i', socket_item.recv(4))[0]
-                        data = socket_item.recv(data_len).decode('utf-8')
-                        if data:
-                            data_dic = json.loads(data)
+                        recved_len = 0
+                        chunks = []
+                        while recved_len < data_len:
+                            chunk = socket_item.recv(data_len - recved_len)
+                            if chunk == b'':
+                                raise RuntimeError('socket connection broken')
+                            chunks.append(chunk)
+                            recved_len += len(chunk)
+                            
+                        if chunks:
+                            data_dic = json.loads(b''.join(chunks))
                             client_data.update(data_dic)
+                            print(client_data)
                     except ConnectionResetError as e:
                         print(e)
                         remove_item.append(socket_item)

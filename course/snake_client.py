@@ -31,28 +31,42 @@ class SnakeClient(Thread):
     def send_message(self, message) -> None:
         client_data = json.dumps({self.client_id:message}).encode('utf-8')
         client_data_length = len(client_data)
+        # sendall will use send() which is c/system call.
+        # will keep on sending the message util endof the message.
         self.tcp_client_socket.sendall(struct.pack('i', client_data_length))
         self.tcp_client_socket.sendall(client_data)
         
     def run(self) -> None:
-        try:
+        while not self.stop:
             time.sleep(0.02)
-            while not self.stop:
+            try:
                 data_len = struct.unpack('i', self.tcp_client_socket.recv(4))[0]
-                data = self.tcp_client_socket.recv(data_len).decode('utf-8')
-                if data:
-                    data_dic = json.loads(data)
+                bytes_recvd = 0
+                chunks = []
+
+                # python recive could not gerentee that we could received 
+                # data as we excepted, so have to do loop read it.
+                while bytes_recvd < data_len:
+                    chunk = self.tcp_client_socket.recv(data_len - bytes_recvd)
+                    if chunk == b'':
+                        raise RuntimeError("socket connection broken")
+                    chunks.append(chunk)
+                    bytes_recvd += len(chunk)
+
+                if chunks:
+                    data_dic = json.loads(b''.join(chunks))
                     self.shadow_snake = data_dic
                     if self.client_id in self.shadow_snake:
                         del (self.shadow_snake[self.client_id])
-                        # print(self.shadow_snake)
-        except struct.error as e:
-            print(data, e)
-            pass
-        except json.decoder.JSONDecodeError as ee:
-            print(data, ee)
-            pass
-            
+                        print(self.shadow_snake)
+
+            except struct.error as e:
+                print(chunks.decode('utf-8'), e)
+                pass
+            except json.decoder.JSONDecodeError as ee:
+                print(chunks.decode('utf-8'), ee)
+                pass
+                
 
     def get_competitor_snake(self):
         competitor_snake = []

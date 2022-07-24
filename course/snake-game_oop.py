@@ -197,6 +197,7 @@ class GameManager:
             if key == pygame.K_RIGHT:
                 move_step = [self.snake.get_snake_unit_size(), 0]
             self.move_step = move_step
+
     def check_eat_food(self):
         if  self.snake.get_snake_head()[0] == self.food.get_food_cod()[0] and \
             self.snake.get_snake_head()[1] == self.food.get_food_cod()[1]:
